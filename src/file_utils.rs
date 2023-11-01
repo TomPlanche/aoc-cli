@@ -7,7 +7,6 @@
 /// .
 /// ├── src/
 /// │   ├── main.rs
-/// │   ├── file_utils.rs
 /// │   ├── bin/
 /// │   │   ├── aoc_cli
 /// │   │   ├── download_input.rs
@@ -136,7 +135,7 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
         // Imports  ==============================================================================  Imports\n\
         \n\
         // Variables  =========================================================================== Variables\n\
-        \n\
+        const INPUT: &str = include_str!(\"../../../data/year_{}/inputs/day_{:02}.txt\");
         // Functions  =========================================================================== Functions\n\
         pub fn response_part_1() {{\n\
             \tprintln!(\"Day {:02} - Part 1\");\n\
@@ -147,7 +146,7 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
         }}\n\
         \n\
         ",
-        day, year, day, day
+        day, year, year, day, day, day
     );
 
     // Write the content to the file
@@ -244,51 +243,6 @@ pub fn init_folders_and_files(caller: &Path, year: u16) {
         .current_dir(&caller)
         .output()
         .expect("Failed to run cargo init");
-
-    // Create the 'src/file_utils.rs' file
-    let src_file_utils_file = caller.join("src/file_utils.rs");
-    if !src_file_utils_file.exists() {
-        std::fs::File::create(&src_file_utils_file).expect("Failed to create file !");
-    }
-
-    let file_utils_content = "\
-    ///\n\
-    /// # file_utils.rs\n\
-    ///\n\
-    ///\n\
-    /// /// Tom Planche <github.com/tomPlanche>\n\
-    \n\
-    // Imports  ==============================================================================  Imports\n\
-    \n\
-    // Variables  =========================================================================== Variables\n\
-    \n\
-    // Functions  =========================================================================== Functions\n\
-    ///\n\
-    /// # read_file_input\n\
-    /// Reads the input file of the given day and year.\n\
-    ///\n\
-    /// ## Arguments\n\
-    /// * `day` - The day of the Advent of Code challenge.\n\
-    /// * `year` - The year of the Advent of Code challenge.\n\
-    ///\n\
-    /// ## Returns\n\
-    /// * `String` - The content of the input file\n\
-    pub fn read_file_input(day: u8, year: u16) -> String {{\n\
-        let file_path = format!(\"./input/year_{}/day_{:02}.txt\", year, day);\n\
-        let file_content = std::fs::read_to_string(file_path).expect(\"Something went wrong reading the file\");\n\
-    \n\
-        file_content\n\
-    }}\n\
-    \n\
-    /*\n\
-     * End of file src/file_utils.rs\n\
-     */\n\
-    \n\
-    ";
-
-    // Write the content to the file
-    write(&src_file_utils_file, file_utils_content).expect("Failed to write to file !");
-
 }
 
 ///

@@ -10,6 +10,11 @@
 use clap::{Parser, Subcommand};
 use chrono::Datelike;
 
+use std::{
+    process::Command,
+    path::PathBuf
+};
+
 use crate::file_utils::{check_file_struct_integrity_year, check_global_file_struct_integrity, init_folders_and_files};
 
 mod file_utils;
@@ -135,17 +140,16 @@ fn get_current_year() -> u16 {
 ///
 /// ## Returns
 /// * `()` - Nothing
-fn compile_solution(caller: &std::path::PathBuf, day: u8, year: u16) {
+fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
     // Run the tests
-    let mut run_tests = std::process::Command::new("cargo");
+    let mut run_tests = Command::new("cargo");
     run_tests
         .current_dir(caller)
         .arg("build")
-        .arg("--release")
-        .arg("--quiet");
+        .arg("--release");
 
     // renames the executable from 'aoc' to 'day_XX_year_YYYY'
-    let mut rename_executable = std::process::Command::new("mv");
+    let mut rename_executable = Command::new("mv");
     rename_executable
         .current_dir(caller)
         .arg("target/release/aoc")
@@ -160,7 +164,7 @@ fn compile_solution(caller: &std::path::PathBuf, day: u8, year: u16) {
         .expect("Failed to run the tests.");
 
     rename_executable
-        .output()
+        .spawn()
         .expect("Failed to rename the executable.");
 }
 
@@ -208,9 +212,6 @@ fn main() {
 
             // Prepare the 'src/main.rs' file
             file_utils::prepare_main_file(&caller, day, year, *part_2);
-
-            // Wait 100ms for the file to be ready
-            std::thread::sleep(std::time::Duration::from_millis(100));
 
             // Compile the solution
             compile_solution(&caller, day, year);
