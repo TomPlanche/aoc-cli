@@ -8,12 +8,9 @@
 
 // Imports  ==============================================================================  Imports
 use clap::{Parser, Subcommand};
-use std::{
-    fs::create_dir,
-    path::Path,
-};
+use chrono::Datelike;
 
-use crate::file_utils::create_folder;
+use crate::file_utils::{check_file_struct_integrity_year, check_global_file_struct_integrity, init_folders_and_files};
 
 mod file_utils;
 
@@ -42,78 +39,71 @@ enum Commands {
         #[arg(short, long)]
         year: Option<u16>,
     },
+
+    /// Create subcommand
+    /// Creates all needed files for the given day of the given year.
+    /// The year is by default the one in the .cargo/config.toml file.
+    /// The day is the current day by default.
+    Create {
+        /// The day of the Advent of Code challenge
+        #[arg(short, long, value_parser = parse_day, default_value = env!("AOC_DAY"))]
+        day: Option<u8>,
+
+        /// The year of the Advent of Code challenge
+        #[arg(short, long, value_parser = parse_year, default_value = env!("AOC_YEAR"))]
+        year: Option<u16>,
+    },
 }
 // Functions  =========================================================================== Functions
 ///
-/// # create_folders_and_files
-/// Creates all the folders and files needed for the Advent of Code challenges of the given year.
-/// The year is 2015 by default.
-///
-/// The folders and files are created in the folder from which the program was called and are
-/// structured like this:
-/// ```text
-/// .
-/// ├── src/
-/// │   ├── main.rs
-/// │   ├── bin/
-/// │   │   ├── aoc_cli
-/// │   │   ├── download_input.rs
-/// │   │   └── solve.rs
-/// │   ├── year_2015/
-/// │   │   ├── day_01.rs
-/// │   │   ├── ...
-/// │   │   └── day_25.rs
-//  │   └── year_n/
-/// ├── data/
-/// │   ├── year_2015/
-/// │   │   ├──puzzles/
-/// │   │   │   ├── day_01.md
-/// │   │   │   ├── ...
-/// │   │   │   └── day_25.md
-/// │   │   └── inputs/
-/// │   │       ├── day_01.txt
-/// │   │       ├── ...
-/// │   │       └── day_25.txt
-/// │   └── year_n/
+/// # parse_day
+/// Parses the day argument.
+/// The day should be between 1 and 25.
 ///
 /// ## Arguments
-/// * `caller` - The folder from which the program was called
-/// * `year` - The year of the Advent of Code challenge
+/// * `s` - The string to parse
 ///
 /// ## Returns
-/// * `()` - Nothing
-fn init_folders_and_files(caller: &Path, year: u16) {
-    println!("Creating folders and files for the year {} @ {}\n 🎄 Happy coding !", year, caller.display());
-
-    // Create the 'src' folder, check if it already exists
-    let src_folder = caller.join("src");
-    if !src_folder.exists() {
-        create_dir(&src_folder).expect("Something went wrong creating the 'src' folder");
+/// * `Result<u8, std::num::ParseIntError>` - The parsed day
+fn parse_day(s: &str) -> Result<u8, String> {
+    let day = s.parse::<u8>().unwrap();
+    if day < 1 || day > 25 {
+        return Err("The day should be between 1 and 25.".parse().unwrap());
     }
+    Ok(day)
+}
 
-    // Create the 'src/bin' folder, check if it already exists
-    let src_bin_folder = src_folder.join("bin");
-    create_folder(&src_bin_folder);
+///
+/// # parse_year
+/// Parses the year argument.
+/// The day should be between 2015 and the current year.
+///
+/// ## Arguments
+/// * `s` - The string to parse
+///
+/// ## Returns
+/// * `Result<u16, std::num::ParseIntError>` - The parsed year
+fn parse_year(s: &str) -> Result<u16, String> {
+    let day = s.parse::<u16>().unwrap();
+    if day < 2015 || day > get_current_year() {
+        return Err("The year should be between 2015 and the current year".parse().unwrap());
+    }
+    Ok(day)
+}
 
-    // Create the 'year_n' folder, check if it already exists
-    let year_folder = src_folder.join(format!("year_{}", year));
-    create_folder(&year_folder);
+///
+/// # get_current_year
+/// Returns the current year.
+///
+/// ## Arguments
+/// * `()` - Nothing
+///
+/// ## Returns
+/// * `u16` - The current year
+fn get_current_year() -> u16 {
+    let now = chrono::Utc::now();
 
-    // Create the 'data' folder, check if it already exists
-    let data_folder = caller.join("data");
-    create_folder(&data_folder);
-
-    // Create the 'data/year_n' folder, check if it already exists
-    let data_year_folder = data_folder.join(format!("year_{}", year));
-    create_folder(&data_year_folder);
-
-    // Create the 'data/year_n/puzzles' folder, check if it already exists
-    let data_year_puzzles_folder = data_year_folder.join("puzzles");
-    create_folder(&data_year_puzzles_folder);
-
-    // Create the 'data/year_n/inputs' folder, check if it already exists
-    let data_year_inputs_folder = data_year_folder.join("inputs");
-    create_folder(&data_year_inputs_folder);
+    now.year() as u16
 }
 
 // Main  ====================================================================================  Main
@@ -135,8 +125,44 @@ fn main() {
                 init_folders_and_files(&caller, env!("AOC_YEAR").parse::<u16>().unwrap());
             }
         }
+        Some(Commands::Create {day, year }) => {
+            let day = day.unwrap_or(env!("AOC_DAY").parse::<u8>().unwrap());
+            let year = year.unwrap_or(env!("AOC_YEAR").parse::<u16>().unwrap());
+
+            if !check_global_file_struct_integrity(&caller)
+                || !check_file_struct_integrity_year(&caller, year) {
+                println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
+                return;
+            }
+
+            // Create the folders and files
+            file_utils::create_files(&caller, day, year);
+        }
         None => {
             println!("No command passed");
         },
     }
+}
+
+// Tests ==================================================================================== Tests
+#[test]
+fn test_parse_day() {
+    assert_eq!(parse_day("1").unwrap(), 1);
+    assert_eq!(parse_day("25").unwrap(), 25);
+    assert_eq!(parse_day("26").unwrap_err(), "The day should be between 1 and 25.");
+}
+
+#[test]
+fn test_parse_year() {
+    assert_eq!(parse_year("2015").unwrap(), 2015);
+    assert_eq!(parse_year("2023").unwrap(), 2023);
+    assert_eq!(
+        parse_year("2024").unwrap_err(),
+        "The year should be between 2015 and the current year"
+    );
+}
+
+#[test]
+fn test_get_current_year() {
+    assert_eq!(get_current_year(), 2023);
 }
