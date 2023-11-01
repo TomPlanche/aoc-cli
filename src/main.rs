@@ -53,6 +53,24 @@ enum Commands {
         #[arg(short, long, value_parser = parse_year, default_value = env!("AOC_YEAR"))]
         year: Option<u16>,
     },
+
+    /// Solve subcommand
+    /// Changes the 'src/main.rs' file to run the tests of the given day.
+    /// Compiles and runs the tests.
+    Solve {
+        /// The day of the Advent of Code challenge
+        #[arg(short, long, value_parser = parse_day, default_value = env!("AOC_DAY"))]
+        day: Option<u8>,
+
+        /// The year of the Advent of Code challenge
+        #[arg(short, long, value_parser = parse_year, default_value = env!("AOC_YEAR"))]
+        year: Option<u16>,
+
+        /// Problem part 2 argument
+        /// If passed, the 'src/main.rs' file will be changed to run both parts of the given day.
+        #[arg(short, long, default_value = "false")]
+        part_2: bool,
+    },
 }
 // Functions  =========================================================================== Functions
 ///
@@ -106,6 +124,46 @@ fn get_current_year() -> u16 {
     now.year() as u16
 }
 
+///
+/// # compile_and_run_tests
+/// Compiles and runs the tests.
+///
+/// ## Arguments
+/// * `caller` - The folder from which the program was called
+/// * `day` - The day of the Advent of Code challenge
+/// * `year` - The year of the Advent of Code challenge
+///
+/// ## Returns
+/// * `()` - Nothing
+fn compile_solution(caller: &std::path::PathBuf, day: u8, year: u16) {
+    // Run the tests
+    let mut run_tests = std::process::Command::new("cargo");
+    run_tests
+        .current_dir(caller)
+        .arg("build")
+        .arg("--release")
+        .arg("--quiet");
+
+    // renames the executable from 'aoc' to 'day_XX_year_YYYY'
+    let mut rename_executable = std::process::Command::new("mv");
+    rename_executable
+        .current_dir(caller)
+        .arg("target/release/aoc")
+        .arg(format!(
+            "target/release/day_{:02}_year_{}",
+            day, year
+        ));
+
+    // Run the commands
+    run_tests
+        .output()
+        .expect("Failed to run the tests.");
+
+    rename_executable
+        .output()
+        .expect("Failed to rename the executable.");
+}
+
 // Main  ====================================================================================  Main
 fn main() {
     // Get the arguments
@@ -137,6 +195,25 @@ fn main() {
 
             // Create the folders and files
             file_utils::create_files(&caller, day, year);
+        }
+        Some(Commands::Solve {day, year, part_2}) => {
+            let day = day.unwrap_or(env!("AOC_DAY").parse::<u8>().unwrap());
+            let year = year.unwrap_or(env!("AOC_YEAR").parse::<u16>().unwrap());
+
+            if !check_global_file_struct_integrity(&caller)
+                || !check_file_struct_integrity_year(&caller, year) {
+                println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
+                return;
+            }
+
+            // Prepare the 'src/main.rs' file
+            file_utils::prepare_main_file(&caller, day, year, *part_2);
+
+            // Wait 100ms for the file to be ready
+            std::thread::sleep(std::time::Duration::from_millis(100));
+
+            // Compile the solution
+            compile_solution(&caller, day, year);
         }
         None => {
             println!("No command passed");

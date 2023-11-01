@@ -34,6 +34,9 @@ use std::fs::create_dir;
 // Imports  ==============================================================================  Imports
 use std::{
     path::Path,
+    fs::{
+        write,
+    },
 };
 
 // Variables  =========================================================================== Variables
@@ -72,8 +75,8 @@ pub fn check_global_file_struct_integrity(caller: &Path) -> bool {
 /// ## Returns
 /// * `bool` - If the file structure is valid or not
 pub fn check_file_struct_integrity_year(caller: &Path, year: u16) -> bool {
-    // Check if the 'src/year_n' folder exists
-    let src_year_folder = caller.join(format!("src/year_{}", year));
+    // Check if the 'src/bin/year_n' folder exists
+    let src_year_folder = caller.join(format!("src/bin/year_{}", year));
     if !src_year_folder.exists() {
         return false;
     }
@@ -117,11 +120,38 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
         return;
     }
 
-    // Create the 'src/year_n/day_n.rs' file
-    let src_year_day_file = caller.join(format!("src/year_{}/day_{:02}.rs", year, day));
+    // Create the 'src/bin/year_n/day_n.rs' file
+    let src_year_day_file = caller.join(format!("src/bin/year_{}/day_{:02}.rs", year, day));
     if !src_year_day_file.exists() {
         std::fs::File::create(&src_year_day_file).expect("Failed to create file !");
     }
+
+    let content = format!(
+        "\
+        ///\n\
+        /// # day_{:02}.rs\n\
+        /// Code for the day 01 of the Advent of Code challenge year {}\n\
+        ///\n\
+        \n\
+        // Imports  ==============================================================================  Imports\n\
+        \n\
+        // Variables  =========================================================================== Variables\n\
+        \n\
+        // Functions  =========================================================================== Functions\n\
+        pub fn response_part_1() {{\n\
+            \tprintln!(\"Day {:02} - Part 1\");\n\
+        }}\n\
+        \n\
+        pub fn response_part_2() {{\n\
+            \tprintln!(\"Day {:02} - Part 2\");\n\
+        }}\n\
+        \n\
+        ",
+        day, year, day, day
+    );
+
+    // Write the content to the file
+    write(&src_year_day_file, content).expect("Failed to write to file !");
 
     // Prepare the 'data/year_n/puzzles/day_n.md' file
     let data_year_puzzles_day_file = caller.join(format!("data/year_{}/puzzles/day_{:02}.md", year, day));
@@ -189,7 +219,7 @@ pub fn init_folders_and_files(caller: &Path, year: u16) {
     create_folder(&src_bin_folder);
 
     // Create the 'year_n' folder, check if it already exists
-    let year_folder = src_folder.join(format!("year_{}", year));
+    let year_folder = src_bin_folder.join(format!("year_{}", year));
     create_folder(&year_folder);
 
     // Create the 'data' folder, check if it already exists
@@ -207,7 +237,74 @@ pub fn init_folders_and_files(caller: &Path, year: u16) {
     // Create the 'data/year_n/inputs' folder, check if it already exists
     let data_year_inputs_folder = data_year_folder.join("inputs");
     create_folder(&data_year_inputs_folder);
+
+    // run cargo init
+    std::process::Command::new("cargo")
+        .arg("init")
+        .current_dir(&caller)
+        .output()
+        .expect("Failed to run cargo init");
+
 }
+
+///
+/// # prepare_main_file
+/// Prepares the 'src/main.rs' file for the given day and year.
+///
+/// ## Arguments
+/// * `caller` - The folder from which the program was called
+/// * `day` - The day of the Advent of Code challenge
+/// * `year` - The year of the Advent of Code challenge
+///
+/// ## Returns
+/// * `()` - Nothing
+pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
+    // Check if the file structure is valid
+    if !check_global_file_struct_integrity(caller)
+        || !check_file_struct_integrity_year(caller, year) {
+        println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
+        return;
+    }
+
+    // Get the 'src/main.rs' file
+    let src_main_file = caller.join("src/main.rs");
+
+    let comment_part_2 = if part_2 {
+        ""
+    } else {
+        "// "
+    };
+
+    let content = format!(
+        "\
+        ///\n\
+        /// # src/main.rs\n\
+        /// Contains the main function for the program.\n\
+        ///\n\
+        \n\
+        // Imports  ==============================================================================  Imports\n\
+        #[path = \"./bin/year_{}/day_{:02}.rs\"]\n\
+        mod day_01;\n\
+        \n\
+        use day_01::response_part_1;\n\
+        {}use day_01::response_part_2;\n\
+        // Variables  =========================================================================== Variables\n\
+        \n\
+        // Functions  =========================================================================== Functions\n\
+        \n\
+        // Main  ====================================================================================  Main\n\
+        fn main() {{\n\
+            \tresponse_part_1();\n\
+            \t{}response_part_2();\n\
+        }}\n\
+        ",
+        year, day, comment_part_2, comment_part_2
+    );
+
+    // Write the content to the file
+    write(&src_main_file, content).expect("Failed to write to file !");
+}
+
 
 /*
  * End of file src/file_utils.rs

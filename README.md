@@ -44,3 +44,11 @@ Create the files for the given day. This will create the files for the given day
 ```bash
 aoc create [day] [year]
 ```
+
+### Solve
+Solve the given day. This will change the `src/main.rs` file to import the given day and call it's `response_part_1` and `response_part_2` functions.
+```bash
+aoc solve [day] [year]
+# and then
+./target/debug/day_x_year_n
+```
