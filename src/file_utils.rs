@@ -282,10 +282,10 @@ pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
         \n\
         // Imports  ==============================================================================  Imports\n\
         #[path = \"./bin/year_{}/day_{:02}.rs\"]\n\
-        mod day_01;\n\
+        mod day;\n\
         \n\
-        use day_01::response_part_1;\n\
-        {}use day_01::response_part_2;\n\
+        use day::response_part_1;\n\
+        {}use day::response_part_2;\n\
         // Variables  =========================================================================== Variables\n\
         \n\
         // Functions  =========================================================================== Functions\n\
@@ -293,6 +293,7 @@ pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
         // Main  ====================================================================================  Main\n\
         fn main() {{\n\
             \tresponse_part_1();\n\
+            \tprintln!();\n\
             \t{}response_part_2();\n\
         }}\n\
         ",
