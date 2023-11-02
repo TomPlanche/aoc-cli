@@ -165,12 +165,22 @@ fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
         .wait()
         .expect("Failed to wait for the tests to finish");
 
+    if !run_tests.status().unwrap().success() {
+        println!("Failed to compile the solution");
+        return;
+    }
+
     // Run the `rename_executable` command and wait for it to finish
     rename_executable
         .spawn()
         .expect("Failed to rename the executable")
         .wait()
         .expect("Failed to wait for the executable to be renamed");
+
+    if !rename_executable.status().unwrap().success() {
+        println!("Failed to rename the executable");
+        return;
+    }
 }
 
 // Main  ====================================================================================  Main
