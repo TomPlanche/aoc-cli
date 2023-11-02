@@ -135,7 +135,7 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
         // Imports  ==============================================================================  Imports\n\
         \n\
         // Variables  =========================================================================== Variables\n\
-        const INPUT: &str = include_str!(\"../../../data/year_{}/inputs/day_{:02}.txt\");\n\
+        const INPUT: &str = include_str!(\"../../../data/year_{}/inputs/day_{:02}.txt\");\n\n\
         // Functions  =========================================================================== Functions\n\
         pub fn response_part_1() {{\n\
             \tprintln!(\"Day {:02} - Part 1\");\n\

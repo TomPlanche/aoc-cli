@@ -158,14 +158,19 @@ fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
             day, year
         ));
 
-    // Run the commands
+    // Run the `run_tests` command and wait for it to finish
     run_tests
-        .output()
-        .expect("Failed to run the tests.");
+        .spawn()
+        .expect("Failed to run the tests")
+        .wait()
+        .expect("Failed to wait for the tests to finish");
 
+    // Run the `rename_executable` command and wait for it to finish
     rename_executable
         .spawn()
-        .expect("Failed to rename the executable.");
+        .expect("Failed to rename the executable")
+        .wait()
+        .expect("Failed to wait for the executable to be renamed");
 }
 
 // Main  ====================================================================================  Main
