@@ -145,6 +145,9 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
             \tprintln!(\"Day {:02} - Part 2\");\n\
         }}\n\
         \n\
+        // Tests ==================================================================================== Tests\n\
+        \n\
+        \n
         ",
         day, year, year, day, day, day
     );
