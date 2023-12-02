@@ -129,7 +129,7 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
         "\
         ///\n\
         /// # day_{:02}.rs\n\
-        /// Code for the day 01 of the Advent of Code challenge year {}\n\
+        /// Code for the day {:02} of the Advent of Code challenge year {}\n\
         ///\n\
         \n\
         // Imports  ==============================================================================  Imports\n\
@@ -149,7 +149,7 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
         \n\
         \n
         ",
-        day, year, year, day, day, day
+        day, day, year, year, day, day, day
     );
 
     // Write the content to the file
