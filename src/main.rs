@@ -146,7 +146,10 @@ fn get_current_year() -> u16 {
 /// * `()` - Nothing
 fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
     // Read Cargo.toml
-    let toml_content = fs::read_to_string("Cargo.toml");
+    let cargo_toml_path = caller.join("Cargo.toml");
+
+    let toml_content = fs::read_to_string(&cargo_toml_path);
+
     let mut doc = toml_content
         .expect("Failed to read Cargo.toml")
         .parse::<DocumentMut>()
@@ -166,6 +169,9 @@ fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
     bin_table.insert("path", "src/main.rs".into());
 
     bin_array.push(bin_table);
+
+    // Write the changes back to Cargo.toml
+    fs::write(&cargo_toml_path, doc.to_string()).expect("Failed to write to Cargo.toml");
 
     // Run the build command
     let mut build_command = Command::new("cargo");
