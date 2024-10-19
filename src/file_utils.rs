@@ -29,14 +29,10 @@
 ///     └── year_n/
 ///
 /// /// Tom Planche <github.com/tomPlanche>
-
 // Imports  ==============================================================================  Imports
 use std::{
+    fs::{create_dir, write},
     path::Path,
-    fs::{
-        write,
-        create_dir
-    },
 };
 // Variables  =========================================================================== Variables
 const AOC_URL: &str = "https://adventofcode.com/";
@@ -114,7 +110,8 @@ pub fn check_file_struct_integrity_year(caller: &Path, year: u16) -> bool {
 pub fn create_files(caller: &Path, day: u8, year: u16) {
     // Check if the file structure is valid
     if !check_global_file_struct_integrity(caller)
-        || !check_file_struct_integrity_year(caller, year) {
+        || !check_file_struct_integrity_year(caller, year)
+    {
         println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
         return;
     }
@@ -156,7 +153,8 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
     write(&src_year_day_file, content).expect("Failed to write to file !");
 
     // Prepare the 'data/year_n/puzzles/day_n.md' file
-    let data_year_puzzles_day_file = caller.join(format!("data/year_{}/puzzles/day_{:02}.md", year, day));
+    let data_year_puzzles_day_file =
+        caller.join(format!("data/year_{}/puzzles/day_{:02}.md", year, day));
     // If the file doesn't exist
     if !data_year_puzzles_day_file.exists() {
         // Create it
@@ -164,14 +162,18 @@ pub fn create_files(caller: &Path, day: u8, year: u16) {
     }
 
     // Prepare the 'data/year_n/inputs/day_n.txt' file
-    let data_year_inputs_day_file = caller.join(format!("data/year_{}/inputs/day_{:02}.txt", year, day));
+    let data_year_inputs_day_file =
+        caller.join(format!("data/year_{}/inputs/day_{:02}.txt", year, day));
     // If the file doesn't exist
     if !data_year_inputs_day_file.exists() {
         // Create it
         std::fs::File::create(&data_year_inputs_day_file).expect("Failed to create file !");
     }
 
-    let message = format!("Files for day {} of year {} created !\nGo to {AOC_URL}{}/day/{} to see the puzzle :).", day, year, year, day);
+    let message = format!(
+        "Files for day {} of year {} created !\nGo to {AOC_URL}{}/day/{} to see the puzzle :).",
+        day, year, year, day
+    );
     println!("{}", message);
 }
 
@@ -208,7 +210,11 @@ pub fn create_folder(path: &Path) {
 /// ## Returns
 /// * `()` - Nothing
 pub fn init_folders_and_files(caller: &Path, year: u16) {
-    println!("Creating folders and files for the year {} @ {}\n 🎄 Happy coding !", year, caller.display());
+    println!(
+        "Creating folders and files for the year {} @ {}\n 🎄 Happy coding !",
+        year,
+        caller.display()
+    );
 
     // Create the 'src' folder, check if it already exists
     let src_folder = caller.join("src");
@@ -262,7 +268,8 @@ pub fn init_folders_and_files(caller: &Path, year: u16) {
 pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
     // Check if the file structure is valid
     if !check_global_file_struct_integrity(caller)
-        || !check_file_struct_integrity_year(caller, year) {
+        || !check_file_struct_integrity_year(caller, year)
+    {
         println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
         return;
     }
@@ -270,11 +277,7 @@ pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
     // Get the 'src/main.rs' file
     let src_main_file = caller.join("src/main.rs");
 
-    let comment_part_2 = if part_2 {
-        ""
-    } else {
-        "// "
-    };
+    let comment_part_2 = if part_2 { "" } else { "// " };
 
     let content = format!(
         "\
@@ -287,6 +290,9 @@ pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
         #[path = \"./bin/year_{}/day_{:02}.rs\"]\n\
         mod day;\n\
         \n\
+        #[path = \"point.rs\"]\n
+        mod point;\n
+        \n
         use day::response_part_1;\n\
         {}use day::response_part_2;\n\
         // Variables  =========================================================================== Variables\n\
@@ -306,7 +312,6 @@ pub fn prepare_main_file(caller: &Path, day: u8, year: u16, part_2: bool) {
     // Write the content to the file
     write(&src_main_file, content).expect("Failed to write to file !");
 }
-
 
 /*
  * End of file src/file_utils.rs

@@ -5,24 +5,24 @@
 /// ## Author
 /// Tom Planche <github.com/tomPlanche>
 ///
-
 // Imports  ==============================================================================  Imports
-use clap::{Parser, Subcommand};
 use chrono::Datelike;
+use clap::{Parser, Subcommand};
+use toml_edit::{ArrayOfTables, DocumentMut, Item, Table};
 
-use std::{
-    process::Command,
-    path::PathBuf
-};
-
-use crate::file_utils::{check_file_struct_integrity_year, check_global_file_struct_integrity, init_folders_and_files};
+use std::{fs, path::PathBuf, process::Command};
 
 mod file_utils;
+use crate::file_utils::{
+    check_file_struct_integrity_year, check_global_file_struct_integrity, init_folders_and_files,
+};
 
 // Variables  =========================================================================== Variables
 #[derive(Parser)]
-#[command(about = "Custom binary that can generate folders, files, download input files for the \
-Advent of Code challenges.")]
+#[command(
+    about = "Custom binary that can generate folders, files, download input files for the \
+Advent of Code challenges."
+)]
 #[command(author = "Tom P. <tomplanche@icloud.com>")]
 #[command(help_template = "{about}\nMade by: {author}\n\nUSAGE:\n{usage}\n\n{all-args}\n")]
 #[command(name = "aoc")]
@@ -34,7 +34,9 @@ struct Cli {
 
 /// Init subcommand
 #[derive(Subcommand)]
-#[command(about = "Creates all the folders needed for the Advent of Code challenges of the given year.")]
+#[command(
+    about = "Creates all the folders needed for the Advent of Code challenges of the given year."
+)]
 enum Commands {
     /// Init subcommand
     /// Creates all the folders and files needed for the Advent of Code challenges of the given year.
@@ -109,7 +111,9 @@ fn parse_day(s: &str) -> Result<u8, String> {
 fn parse_year(s: &str) -> Result<u16, String> {
     let day = s.parse::<u16>().unwrap();
     if day < 2015 || day > get_current_year() {
-        return Err("The year should be between 2015 and the current year".parse().unwrap());
+        return Err("The year should be between 2015 and the current year"
+            .parse()
+            .unwrap());
     }
     Ok(day)
 }
@@ -141,44 +145,42 @@ fn get_current_year() -> u16 {
 /// ## Returns
 /// * `()` - Nothing
 fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
-    // Run the tests
-    let mut run_tests = Command::new("cargo");
-    run_tests
+    // Read Cargo.toml
+    let toml_content = fs::read_to_string("Cargo.toml");
+    let mut doc = toml_content
+        .expect("Failed to read Cargo.toml")
+        .parse::<DocumentMut>()
+        .expect("Failed to parse Cargo.toml");
+
+    // Add or modify the [[bin]] section
+    if doc.get("bin").is_none() {
+        doc["bin"] = Item::ArrayOfTables(ArrayOfTables::new());
+    }
+
+    let bin_array = doc["bin"].as_array_of_tables_mut().unwrap();
+
+    let desired_name = format!("day_{:02}_year_{}", day, year);
+
+    let mut bin_table = Table::new();
+    bin_table.insert("name", desired_name.into());
+    bin_table.insert("path", "src/main.rs".into());
+
+    bin_array.push(bin_table);
+
+    // Run the build command
+    let mut build_command = Command::new("cargo");
+    build_command
         .current_dir(caller)
         .arg("build")
         .arg("--release");
 
-    // renames the executable from 'aoc' to 'day_XX_year_YYYY'
-    let mut rename_executable = Command::new("mv");
-    rename_executable
-        .current_dir(caller)
-        .arg("target/release/aoc")
-        .arg(format!(
-            "target/release/day_{:02}_year_{}",
-            day, year
-        ));
+    // Execute the build command
+    let status = build_command
+        .status()
+        .expect("Failed to execute build command");
 
-    // Run the `run_tests` command and wait for it to finish
-    run_tests
-        .spawn()
-        .expect("Failed to run the tests")
-        .wait()
-        .expect("Failed to wait for the tests to finish");
-
-    if !run_tests.status().unwrap().success() {
+    if !status.success() {
         println!("Failed to compile the solution");
-        return;
-    }
-
-    // Run the `rename_executable` command and wait for it to finish
-    rename_executable
-        .spawn()
-        .expect("Failed to rename the executable")
-        .wait()
-        .expect("Failed to wait for the executable to be renamed");
-
-    if !rename_executable.status().unwrap().success() {
-        println!("Failed to rename the executable");
         return;
     }
 }
@@ -202,12 +204,13 @@ fn main() {
                 init_folders_and_files(&caller, env!("AOC_YEAR").parse::<u16>().unwrap());
             }
         }
-        Some(Commands::Create {day, year }) => {
+        Some(Commands::Create { day, year }) => {
             let day = day.unwrap_or(env!("AOC_DAY").parse::<u8>().unwrap());
             let year = year.unwrap_or(env!("AOC_YEAR").parse::<u16>().unwrap());
 
             if !check_global_file_struct_integrity(&caller)
-                || !check_file_struct_integrity_year(&caller, year) {
+                || !check_file_struct_integrity_year(&caller, year)
+            {
                 println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
                 return;
             }
@@ -215,12 +218,13 @@ fn main() {
             // Create the folders and files
             file_utils::create_files(&caller, day, year);
         }
-        Some(Commands::Solve {day, year, part_2}) => {
+        Some(Commands::Solve { day, year, part_2 }) => {
             let day = day.unwrap_or(env!("AOC_DAY").parse::<u8>().unwrap());
             let year = year.unwrap_or(env!("AOC_YEAR").parse::<u16>().unwrap());
 
             if !check_global_file_struct_integrity(&caller)
-                || !check_file_struct_integrity_year(&caller, year) {
+                || !check_file_struct_integrity_year(&caller, year)
+            {
                 println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
                 return;
             }
@@ -233,7 +237,7 @@ fn main() {
         }
         None => {
             println!("No command passed");
-        },
+        }
     }
 }
 
@@ -242,7 +246,10 @@ fn main() {
 fn test_parse_day() {
     assert_eq!(parse_day("1").unwrap(), 1);
     assert_eq!(parse_day("25").unwrap(), 25);
-    assert_eq!(parse_day("26").unwrap_err(), "The day should be between 1 and 25.");
+    assert_eq!(
+        parse_day("26").unwrap_err(),
+        "The day should be between 1 and 25."
+    );
 }
 
 #[test]
