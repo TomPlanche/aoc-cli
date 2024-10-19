@@ -8,7 +8,7 @@
 // Imports  ==============================================================================  Imports
 use chrono::Datelike;
 use clap::{Parser, Subcommand};
-use toml_edit::{ArrayOfTables, DocumentMut, Item, Table};
+use toml_edit::{ArrayOfTables, DocumentMut, Table};
 
 use std::{fs, path::PathBuf, process::Command};
 
@@ -134,6 +134,49 @@ fn get_current_year() -> u16 {
 }
 
 ///
+/// # update_cargo_toml
+///
+/// Updates the 'Cargo.toml' file by removing the existing [[bin]] sections and maybe adding a new one for the given day and year.
+///
+/// ## Arguments
+///
+/// * `caller` - The path of the caller
+/// * `day` - The day of the Advent of Code challenge
+/// * `year` - The year of the Advent of Code challenge
+/// * `add_bin` - If true, a new [[bin]] section will be added for the given day and year
+///
+/// ## Returns
+/// * `Result<(), Box<dyn std::error::Error>>` - The result of the operation
+fn update_cargo_toml(
+    caller: &PathBuf,
+    day: u8,
+    year: u16,
+    add_bin: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cargo_toml_path = caller.join("Cargo.toml");
+    let toml_content = fs::read_to_string(&cargo_toml_path)?;
+    let mut doc = toml_content.parse::<DocumentMut>()?;
+
+    // Remove existing [[bin]] sections
+    doc.remove("bin");
+
+    if add_bin {
+        let desired_name = format!("day_{:02}_year_{}", day, year);
+        let mut bin_array = ArrayOfTables::new();
+        let mut bin_table = Table::new();
+
+        bin_table.insert("name", toml_edit::value(desired_name));
+        bin_table.insert("path", toml_edit::value("src/main.rs"));
+        bin_array.push(bin_table);
+
+        doc["bin"] = toml_edit::Item::ArrayOfTables(bin_array);
+    }
+
+    fs::write(&cargo_toml_path, doc.to_string())?;
+    Ok(())
+}
+
+///
 /// # compile_and_run_tests
 /// Compiles and runs the tests.
 ///
@@ -145,34 +188,11 @@ fn get_current_year() -> u16 {
 /// ## Returns
 /// * `()` - Nothing
 fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
-    // Read Cargo.toml
-    let cargo_toml_path = caller.join("Cargo.toml");
-
-    let toml_content = fs::read_to_string(&cargo_toml_path);
-
-    let mut doc = toml_content
-        .expect("Failed to read Cargo.toml")
-        .parse::<DocumentMut>()
-        .expect("Failed to parse Cargo.toml");
-
-    // Add or modify the [[bin]] section
-    if doc.get("bin").is_none() {
-        doc["bin"] = Item::ArrayOfTables(ArrayOfTables::new());
+    // Add [[bin]] section
+    if let Err(e) = update_cargo_toml(caller, day, year, true) {
+        eprintln!("Failed to update Cargo.toml: {}", e);
+        return;
     }
-
-    let bin_array = doc["bin"].as_array_of_tables_mut().unwrap();
-
-    let desired_name = format!("day_{:02}_year_{}", day, year);
-
-    let mut bin_table = Table::new();
-    bin_table.insert("name", desired_name.into());
-    bin_table.insert("path", "src/main.rs".into());
-
-    bin_array.push(bin_table);
-
-    // Write the changes back to Cargo.toml
-    fs::write(&cargo_toml_path, doc.to_string()).expect("Failed to write to Cargo.toml");
-
     // Run the build command
     let mut build_command = Command::new("cargo");
     build_command
@@ -188,6 +208,11 @@ fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
     if !status.success() {
         println!("Failed to compile the solution");
         return;
+    }
+
+    // Remove [[bin]] section after compilation
+    if let Err(e) = update_cargo_toml(caller, day, year, false) {
+        eprintln!("Failed to clean up Cargo.toml: {}", e);
     }
 }
 
