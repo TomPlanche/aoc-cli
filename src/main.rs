@@ -78,6 +78,18 @@ enum Commands {
         #[arg(short, long, default_value = "false")]
         part_2: bool,
     },
+
+    /// Test subcommand
+    /// Runs the tests for the given day and year
+    Test {
+        /// The day of the Advent of Code challenge
+        #[arg(short, long, value_parser = parse_day, default_value = env!("AOC_DAY"))]
+        day: Option<u8>,
+
+        /// The year of the Advent of Code challenge
+        #[arg(short, long, value_parser = parse_year, default_value = env!("AOC_YEAR"))]
+        year: Option<u16>,
+    },
 }
 // Functions  =========================================================================== Functions
 ///
@@ -216,6 +228,49 @@ fn compile_solution(caller: &PathBuf, day: u8, year: u16) {
     }
 }
 
+///
+/// # run_tests
+/// Runs the tests for the given day and year.
+/// It will:
+/// 1. Update the Cargo.toml with the appropriate binary target
+/// 2. Run the tests using cargo test
+/// 3. Clean up the Cargo.toml file
+///
+/// ## Arguments
+/// * `caller` - The path to the project root directory
+/// * `day` - The day of the Advent of Code challenge
+/// * `year` - The year of the Advent of Code challenge
+fn run_tests(caller: &PathBuf, day: u8, year: u16) {
+    // Add [[bin]] section
+    if let Err(e) = update_cargo_toml(caller, day, year, true) {
+        eprintln!("Failed to update Cargo.toml: {}", e);
+        return;
+    }
+
+    // Run the test command
+    let mut test_command = Command::new("cargo");
+    test_command
+        .current_dir(caller)
+        .arg("test")
+        .arg("--release")
+        .arg(format!("day_{:02}_year_{}", day, year));
+
+    // Execute the test command
+    let status = test_command
+        .status()
+        .expect("Failed to execute test command");
+
+    if !status.success() {
+        println!("Tests failed");
+    } else {
+        println!("All tests passed!");
+    }
+
+    // Remove [[bin]] section after testing
+    if let Err(e) = update_cargo_toml(caller, day, year, false) {
+        eprintln!("Failed to clean up Cargo.toml: {}", e);
+    }
+}
 // Main  ====================================================================================  Main
 fn main() {
     // Get the arguments
@@ -265,6 +320,23 @@ fn main() {
 
             // Compile the solution
             compile_solution(&caller, day, year);
+        }
+        Some(Commands::Test { day, year }) => {
+            let day = day.unwrap_or(env!("AOC_DAY").parse::<u8>().unwrap());
+            let year = year.unwrap_or(env!("AOC_YEAR").parse::<u16>().unwrap());
+
+            if !check_global_file_struct_integrity(&caller)
+                || !check_file_struct_integrity_year(&caller, year)
+            {
+                println!("The file structure is not correct.\nPlease run `cargo aoc init` or `cargo aoc init --year desired_year` to create the folders and files needed for the Advent of Code challenges.");
+                return;
+            }
+
+            // Prepare the main.rs file
+            file_utils::prepare_main_file(&caller, day, year, false);
+
+            // Run the tests
+            run_tests(&caller, day, year);
         }
         None => {
             println!("No command passed");
